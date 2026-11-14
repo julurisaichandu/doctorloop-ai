@@ -13,13 +13,11 @@ export function signBandBody(secret: string, t: string, rawBody: string): string
   return createHmac("sha256", secret).update(`${t}.${rawBody}`).digest("hex");
 }
 
-/** Header `t=<unix seconds>,v1=<hex>`: valid only within the tolerance and with a matching HMAC. */
+/** Header exactly `t=<unix seconds>,v1=<lowercase hex>`: valid only within the tolerance and with a matching HMAC. */
 export function verifyBandSignature(header: string | null, rawBody: string, secret: string, now: Date): boolean {
-  if (!header) return false;
-  const parts = new Map(header.split(",").map((part) => part.trim().split("=", 2) as [string, string]));
-  const t = parts.get("t");
-  const v1 = parts.get("v1");
-  if (!t || !/^\d{1,12}$/.test(t) || !v1 || !/^[0-9a-f]{64}$/i.test(v1)) return false;
+  const match = header?.match(/^t=(\d{1,12}),v1=([0-9a-f]{64})$/);
+  if (!match) return false;
+  const [, t, v1] = match;
   if (Math.abs(now.getTime() / 1000 - Number(t)) > BAND_SIGNATURE_TOLERANCE_SECONDS) return false;
   const expected = Buffer.from(signBandBody(secret, t, rawBody), "hex");
   const given = Buffer.from(v1, "hex");

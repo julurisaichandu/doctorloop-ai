@@ -5,7 +5,9 @@ import { POST } from "@/app/api/integrations/vexo/band/route";
 import { getIntegrationStatus } from "@/lib/config/env";
 import { getSystemRepository } from "@/lib/data";
 import { getLocalDb, resetLocalDb } from "@/lib/data/local/local-db";
+import { LocalRepository } from "@/lib/data/local/local-repository";
 import type { Actor } from "@/lib/domain/types";
+import { conflict } from "@/lib/errors";
 import {
   bandSourceRefId,
   MAX_BAND_BODY_BYTES,
@@ -15,7 +17,7 @@ import {
 import { getSharedRecord } from "@/lib/services/doctor";
 import { approveEntry, listPatientTimeline } from "@/lib/services/patient";
 import { handleBandRecording } from "@/lib/services/vexo-band";
-import { drPark, KNEE_NOTE, maya, patientIdOf } from "../services/support";
+import { daniel, drPark, KNEE_NOTE, maya, patientIdOf } from "../services/support";
 
 // The band path has no session: any actor-scoped repository there is a bug that local mode
 // would hide (in Supabase mode it runs as anon and fails). Fail loudly instead.
@@ -220,6 +222,39 @@ describe("idempotency", () => {
     expect(getLocalDb().data.sourceRefs.filter((r) => r.id === id)).toHaveLength(1);
   });
 
+  it("never re-links a source reference that belongs to another patient", async () => {
+    const id = refIdFor("rec_001");
+    const danielId = patientIdOf(daniel());
+    await getSystemRepository().createSourceRef({
+      id,
+      patientId: danielId,
+      provider: "vexo",
+      mode: "live",
+      externalId: "band-47:rec_001",
+      title: "Band 47 conversation",
+      excerpt: null,
+      sourceTimestamp: null,
+      retrievedAt: new Date().toISOString(),
+      metadata: { tool: "band" },
+    });
+    expect(await post(recording())).toEqual({ status: 200, body: { stored: false, reason: "duplicate" } });
+    expect(entriesLinking(id)).toHaveLength(0);
+    expect(getLocalDb().data.sourceRefs.filter((r) => r.id === id).map((r) => r.patientId)).toEqual([danielId]);
+  });
+
+  it("answers duplicate when a concurrent request creates the source reference first", async () => {
+    const spy = vi
+      .spyOn(LocalRepository.prototype, "createSourceRef")
+      .mockRejectedValueOnce(conflict("Source reference already exists."));
+    try {
+      expect(await post(recording())).toEqual({ status: 200, body: { stored: false, reason: "duplicate" } });
+      expect(spy).toHaveBeenCalledOnce();
+    } finally {
+      spy.mockRestore();
+    }
+    expect(entriesLinking(refIdFor("rec_001"))).toHaveLength(0);
+  });
+
   it("local createSourceRef rejects an existing id like the Supabase primary key", async () => {
     const input = {
       id: refIdFor("x"),
@@ -271,7 +306,31 @@ describe("rejections", () => {
     expect((await post(null, { raw, header: "t=abc,v1=zz" })).status).toBe(401);
     const stale = new Date(now.getTime() - 301_000);
     expect((await post(null, { raw, header: signedHeader(raw, stale), now })).status).toBe(401);
+    const future = new Date(now.getTime() + 301_000);
+    expect((await post(null, { raw, header: signedHeader(raw, future), now })).status).toBe(401);
     expect((await post(null, { raw: raw.replace("rec_001", "rec_002"), header: signedHeader(raw, now), now })).status).toBe(401);
+    expect(getLocalDb().data.sourceRefs.some((r) => r.externalId?.startsWith("band-"))).toBe(false);
+  });
+
+  it("rejects a malformed signature header with 401", async () => {
+    const raw = JSON.stringify(recording());
+    const now = new Date();
+    const valid = signedHeader(raw, now);
+    expect(verifyBandSignature(valid, raw, SECRET, now)).toBe(true);
+    const [tPart, v1Part] = valid.split(",");
+    const zeros = `v1=${"0".repeat(64)}`;
+    const malformed = [
+      `${valid}=garbage`,
+      `${valid}0`,
+      `${tPart},${zeros},${v1Part}`,
+      `${tPart},${tPart},${v1Part}`,
+      `${valid},v0=${"0".repeat(64)}`,
+      `x=1,${valid}`,
+      `${v1Part},${tPart}`,
+      `${tPart}, ${v1Part}`,
+      `${tPart},${v1Part.toUpperCase().replace("V1", "v1")}`,
+    ];
+    for (const header of malformed) expect((await post(null, { raw, header, now })).status).toBe(401);
     expect(getLocalDb().data.sourceRefs.some((r) => r.externalId?.startsWith("band-"))).toBe(false);
   });
 
@@ -319,8 +378,13 @@ describe("route", () => {
   it("passes a signed post through to the service", async () => {
     const raw = JSON.stringify(recording());
     const headers = { "x-vexo-band-signature": signedHeader(raw, new Date()) };
-    const res = await POST(new Request(url, { method: "POST", body: raw, headers }));
-    expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ stored: true });
+    forbidActorRepo = true;
+    try {
+      const res = await POST(new Request(url, { method: "POST", body: raw, headers }));
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ stored: true });
+    } finally {
+      forbidActorRepo = false;
+    }
   });
 });
