@@ -32,7 +32,7 @@ import type {
   VexoConnection,
   VoiceSession,
 } from "@/lib/domain/types";
-import { forbidden, notFound } from "@/lib/errors";
+import { conflict, forbidden, notFound } from "@/lib/errors";
 import type {
   AiUsageRecordPatch,
   EntryQuery,
@@ -328,6 +328,10 @@ export class LocalRepository implements Repository {
 
   async createSourceRef(input: NewSourceReference): Promise<SourceReference> {
     this.requireSystem("Writing source references");
+    // Mirrors the Supabase primary key (23505 -> CONFLICT): callers rely on it for idempotency.
+    if (input.id && this.db.data.sourceRefs.some((r) => r.id === input.id)) {
+      throw conflict("That record already exists.");
+    }
     const ref: SourceReference = { ...input, id: input.id ?? crypto.randomUUID() };
     this.db.data.sourceRefs.push(ref);
     return this.mutated(ref);

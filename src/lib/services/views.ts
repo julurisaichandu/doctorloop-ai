@@ -5,7 +5,17 @@ import type { Repository } from "@/lib/data/repository";
 import type { DoctorReview, JournalEntry, Observation, SourceReference, TimelineEntryView } from "@/lib/domain/types";
 
 /** Metadata keys that are safe to show to doctors (no free text from the patient). */
-const DOCTOR_VISIBLE_SOURCE_METADATA = ["tool", "query", "mcpServer", "replayFile", "trimmed", "transcriptSource"] as const;
+const DOCTOR_VISIBLE_SOURCE_METADATA = [
+  "tool",
+  "query",
+  "mcpServer",
+  "replayFile",
+  "trimmed",
+  "transcriptSource",
+  // Band push: which band and how it was transcribed. Gate scores stay patient-only.
+  "bandNumber",
+  "sttProvider",
+] as const;
 
 /** Doctor-facing copy of a source reference: no excerpt, whitelisted metadata only. */
 export function sanitizeSourceRefForDoctor(ref: SourceReference): SourceReference {

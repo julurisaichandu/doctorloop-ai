@@ -18,6 +18,19 @@ function provenance(ref: SourceReference): string {
   const original = ref.sourceTimestamp ? ` · original time ${format(new Date(ref.sourceTimestamp), "MMM d, h:mm a")}` : "";
   const title = ref.title ? ` “${ref.title}”` : "";
   const ext = ref.externalId ? ` · id ${ref.externalId}` : "";
+  if (ref.provider === "vexo" && md.tool === "band") {
+    // Doctor views carry only bandNumber + sttProvider; every other part drops out cleanly.
+    const parts = [`Vexo band${typeof md.bandNumber === "number" ? ` ${md.bandNumber}` : ""}${ref.mode === "simulated" ? " (simulated)" : ""}`];
+    const stt = str("sttProvider");
+    if (stt === "deepgram") parts.push(`transcribed by Deepgram${str("sttModel") ? ` ${str("sttModel")}` : ""}`);
+    if (stt === "typed") parts.push("typed transcript (no audio)");
+    const gate = str("gateProvider");
+    if (gate === "gemini") parts.push("kept by the Gemini Decisions privacy gate");
+    if (gate === "rule-based") {
+      parts.push(md.gateFallback === true ? "kept by the rule-based privacy gate (Gemini fallback)" : "kept by the rule-based privacy gate");
+    }
+    return `${parts.join(" · ")}${original}${ext}`;
+  }
   if (ref.provider === "vexo") {
     const tool = str("tool");
     const query = str("query");

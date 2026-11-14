@@ -12,6 +12,7 @@ export function IntegrationsPopover({ status, showBilling = false }: { status: I
     { name: "AI", label: status.ai.label, mode: status.ai.mode === "openai" ? "live" : "mock" },
     { name: "Voice", label: status.voice.label, mode: status.voice.mode === "elevenlabs" ? "live" : "simulated" },
     { name: "Vexo", label: status.vexo.label, mode: status.vexo.mode === "file" ? "simulated" : status.vexo.mode },
+    { name: "Band", label: status.band.label, mode: status.band.mode },
     ...(showBilling
       ? [{ name: "Billing", label: status.billing.label, mode: status.billing.mode === "stripe" ? "test" : "simulated" } as const]
       : []),

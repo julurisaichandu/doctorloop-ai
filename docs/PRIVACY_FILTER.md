@@ -2,9 +2,10 @@
 
 DoctorLoop keeps only what a care team needs. Everything that is saved as an update passes a privacy filter first, on the server, before anything is stored. Synthetic data only; this is a prototype, not a compliance claim.
 
-## Two layers
+## Layers
 
-1. **Relevance filter (Vexo import).** Whole band recordings with no health words are dropped. They are never stored and never sent to an AI.
+0. **Edge gate (band push only).** For recordings from the band bridge (`band-bridge/`), each conversation is first judged on the laptop next to the band: Gemini Decisions estimates "very private" and "health related", and only conversations below the private threshold and above the health threshold (`GATE_PRIVATE_MAX`, `GATE_HEALTH_MIN`, default 0.5) are sent to DoctorLoop. Without a Gemini key, or when the call fails, a rule-based gate decides (marked as a fallback). Dropped conversations never leave the laptop.
+1. **Relevance filter (Vexo import and band push).** Whole band recordings with no health words are dropped. They are never stored and never sent to an AI.
 2. **Sentence filter (every saved update: typed, voice, Vexo, and edits).** The text is split into numbered sentences. A classifier says which sentences to keep and which spans to hide. Code then builds the stored text from the kept original sentences. The model never writes text, so what is stored is verbatim apart from placeholders.
 
 ## What is kept, removed and hidden
@@ -28,4 +29,5 @@ With `OPENAI_API_KEY` the classifier is OpenAI (labelled "AI draft · unverified
 - In live OpenAI mode the **raw text is sent to OpenAI** to be filtered (synthetic data only).
 - Voice check-ins: the raw call transcript and in-call notes are used only to build the filtered update and are not kept (the voice session stores an empty transcript; the post-call webhook only acknowledges). ElevenLabs itself keeps its own conversation history in live mode, according to your ElevenLabs settings.
 - Vexo band recordings stay in Vexo (or in the replay file); DoctorLoop stores only the filtered update plus a hash and length of the original.
+- Band push: the band's **audio is sent to Deepgram** for transcription, the **transcript text is sent to Google** (Gemini Decisions) for the edge gate, and only kept conversations reach the DoctorLoop server, which runs layers 1 and 2 (in live OpenAI mode the text then also goes to OpenAI). DoctorLoop stores the filtered update plus a hash and length of the transcript, and the gate's scores; never the transcript or audio. Updates arrive as "pending your review".
 - Automatic filtering can miss things (an unusual name, an unlabelled detail) or keep a sentence it should not. Patients should review before sharing. No guarantee is made.

@@ -6,6 +6,7 @@ const DOTS = {
   simulated: "bg-amber",
   test: "bg-ink",
   local: "bg-ink",
+  off: "bg-muted-foreground",
 } as const;
 
 export function IntegrationModeBadge({
@@ -13,7 +14,7 @@ export function IntegrationModeBadge({
   mode,
 }: {
   label: string;
-  mode: "live" | "mock" | "simulated" | "test" | "local";
+  mode: keyof typeof DOTS;
 }) {
   return (
     <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-hairline bg-paper-2 px-2.5 py-0.5 text-xs font-medium text-ink">

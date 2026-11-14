@@ -70,7 +70,8 @@ AI pre-visit summary with citations to original records, and mark updates review
   Never accept `patientId`/`userId` from the client for "self" operations — derive from actor.
 - Route handlers only for OAuth redirects/callbacks and webhooks. Billing adds two: the Stripe Checkout
   return (`/api/billing/checkout/complete`) and the Stripe webhook (`/api/webhooks/stripe`). The statement
-  CSV export is a server action that returns text; the client saves it as a Blob.
+  CSV export is a server action that returns text; the client saves it as a Blob. The Vexo band push
+  (`POST /api/integrations/vexo/band`, §6.8) is a signed webhook from the local Pipecat bridge.
 - No secrets in client bundles. Only `NEXT_PUBLIC_SUPABASE_URL`,
   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and `NEXT_PUBLIC_APP_URL` may reach the browser.
 - Times: store ISO UTC; display with date-fns (`format(new Date(iso), "MMM d, h:mm a")`).
@@ -100,6 +101,7 @@ src/
     doctor/page.tsx, doctor/actions.ts, doctor/patients/[patientId]/**         [DOCTOR-UI]
     api/webhooks/elevenlabs/route.ts                                           [VOICE]
     api/integrations/vexo/{connect,callback,disconnect}/route.ts               [VEXO]
+    api/integrations/vexo/band/route.ts                                        [VEXO]
     doctor/billing/{page,loading,actions,checkout/page,statements/[patientId]/page}.tsx  [BILLING]
     api/billing/checkout/complete/route.ts, api/webhooks/stripe/route.ts       [BILLING]
   components/
@@ -118,7 +120,7 @@ src/
     auth/**, authz/**                                                          [CORE]
     services/{patient,doctor,ingest,summaries,views}.ts                        [CORE]
     services/voice.ts, integrations/elevenlabs/**                              [VOICE]
-    services/vexo.ts, integrations/vexo/**                                     [VEXO]
+    services/{vexo,vexo-band}.ts, integrations/vexo/**                         [VEXO]
     ai/** (except schemas.ts), mastra/**                                       [AI]
     ai/usage.ts                                                                [BILLING]
     services/{billing-usage,billing-account,billing-views}.ts                  [BILLING]
@@ -183,7 +185,7 @@ body/observations is only allowed in `pending_review`. Every transition writes a
   = `"elevenlabs_api" | "client_unverified" | "simulated"`). The entry `body` is the only
   patient text that can ever be shared. Doctor-facing views additionally strip
   `sourceRef.excerpt` and keep only whitelisted metadata keys
-  (`tool`, `query`, `mcpServer`, `trimmed`, `transcriptSource`).
+  (`tool`, `query`, `mcpServer`, `replayFile`, `trimmed`, `transcriptSource`, `bandNumber`, `sttProvider`).
 - Entry `sourceRefId` / `voiceSessionId` must reference rows of the **same patient**
   (composite FKs in SQL; checked in the local repository).
 - Only the newest clinician summary per patient is readable by doctors; older ones are
@@ -357,6 +359,30 @@ UI: `src/components/voice/voice-check-in.tsx` → `export function VoiceCheckIn(
 provenance, stores `source_references` + entries via `ingestEntry` with `source: "vexo"`),
 `disconnectVexo(actor)`. Adapter interface in `src/lib/integrations/vexo/types.ts`
 with `MockVexoAdapter` + `LiveVexoAdapter` (MCP + OAuth 2.1 PKCE). UI page `/patient/import`.
+
+#### Band push (Pipecat bridge)
+`band-bridge/` (Python, runs next to the band) transcribes band audio with Deepgram, gates each conversation with
+Gemini Decisions (or a rule-based fallback) and POSTs the kept ones to `POST /api/integrations/vexo/band`
+(`src/app/api/integrations/vexo/band/route.ts` → `handleBandRecording(rawBody, signatureHeader, now?)` in
+`src/lib/services/vexo-band.ts`; signature + schema helpers in `src/lib/integrations/vexo/band-bridge.ts`).
+- Config: `VEXO_BAND_NUMBER` (1..999), `VEXO_BAND_SECRET` (≥ 32 chars), `VEXO_BAND_WEARER` (a patient e-mail). All three
+  valid or the route answers 503. `getIntegrationStatus().band` labels it.
+- Header `x-vexo-band-signature: t=<unix s>,v1=<hex HMAC-SHA256(secret, "<t>.<raw body>")>`, ±300 s, constant-time compare.
+- Body: `{ bandNumber, recordingId, mode: live|simulated, startedAt, endedAt, transcript (≤ 20,000), stt { provider, model },
+  gate { provider, model, veryPrivate, healthRelated, fallback } }`; max 256 KB (413).
+- Responses: 200 `{stored:true, entryId}` | 200 `{stored:false, reason: duplicate|not_health_related|nothing_kept}` | 401 bad
+  or stale signature | 400 bad JSON/payload, other band, startedAt outside [now − 31 d, now + 1 d] | 503 not configured or
+  wearer not found. Transcript text never appears in responses or logs.
+- Flow: config → signature → schema → band number → time range → wearer (demo account e-mail, confirmed by the stored
+  profile: same e-mail, role patient) → idempotency (source-ref id = UUID from sha256(`band-<n>:<recordingId>`); a linked
+  entry = duplicate, a ref without an entry = finish the crashed run) → relevance filter → privacy filter → source ref
+  (metadata only: tool `band`, band, STT and gate details, hash + length of the transcript) → `pending_review` entry with
+  `source: "vexo"` and `occurredAt = startedAt` → patient summary.
+- **System repository only.** The request has no session, so an actor repository would run as anon in Supabase mode.
+  After the explicit authorization (HMAC + the configured band → wearer mapping) every read and write uses
+  `getSystemRepository()`, through `ingestFilteredEntryForPatient(patient, filtered, input, { trigger })` in `ingest.ts`.
+  AI usage is recorded with the system trigger (`{ kind: "system", userId: null }`; payer = earliest-assigned doctor).
+  `tests/integrations/vexo-band.test.ts` makes `getRepository` throw while the handler runs.
 
 ### 6.9 Shared UI components — `src/components/shared/*` [SHELL]
 Server-compatible (no `"use client"`) unless marked (C).

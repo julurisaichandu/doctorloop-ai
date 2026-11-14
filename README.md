@@ -137,6 +137,15 @@ OAuth facts discovered from Vexo's public metadata (research notes in `src/lib/i
 
 **Needs confirmation:** the Vexo tool schemas are only visible after authenticating. The argument names sent to `search`, `get_context` and `get_transcript` (`TOOL_ARGUMENTS`) and the result field names (`FIELD_ALIASES`) are best guesses, isolated in `src/lib/integrations/vexo/live-adapter.ts`, and results are parsed defensively. Adjust them once the real schemas are known.
 
+### Vexo band push (Pipecat bridge)
+
+`band-bridge/` is a small Python program that runs next to Vexo band 47. It transcribes the band's audio with Deepgram, lets a Gemini Decisions privacy gate drop private or off-topic conversations on the laptop, and posts the kept ones, HMAC-signed, to `POST /api/integrations/vexo/band`. Each one lands as a "pending your review" Vexo entry for the wearer.
+
+1. In `.env.local` set `VEXO_BAND_NUMBER=47`, `VEXO_BAND_SECRET` (at least 32 characters; `openssl rand -hex 32`) and `VEXO_BAND_WEARER` (the wearer's demo account e-mail, e.g. `maya.thompson@example.com`). The header's integrations list shows the band once all three are valid.
+2. Set up and run the bridge as described in [`band-bridge/README.md`](band-bridge/README.md), using the same band number and secret.
+
+Contract, flow and privacy rules: `docs/ARCHITECTURE.md` §6.8 and `docs/PRIVACY_FILTER.md`.
+
 ---
 
 ## Practice billing (Stripe test mode)

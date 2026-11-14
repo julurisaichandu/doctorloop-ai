@@ -8,7 +8,7 @@ import type { RunPipelineOutput } from "@/lib/ai/pipeline";
 import type { ExtractedObservation } from "@/lib/ai/schemas";
 import { assertPatientSelf } from "@/lib/authz/policies";
 import { getRepository, getSystemRepository } from "@/lib/data";
-import type { NewObservation } from "@/lib/data/repository";
+import type { NewJournalEntry, NewObservation, Repository } from "@/lib/data/repository";
 import {
   OBSERVATION_CATEGORIES,
   type Actor,
@@ -151,8 +151,18 @@ export async function processEntry(
   entry: JournalEntry,
   options: { summarize?: boolean } = {},
 ): Promise<void> {
+  await runEntryPipeline(getRepository(actor), { kind: actor.role, userId: actor.userId }, patient, entry, options);
+}
+
+/** processEntry with an explicit read repository and usage trigger (actor path or system path). */
+async function runEntryPipeline(
+  repo: Repository,
+  trigger: UsageTrigger,
+  patient: PatientProfile,
+  entry: JournalEntry,
+  options: { summarize?: boolean },
+): Promise<void> {
   const summarize = options.summarize ?? true;
-  const repo = getRepository(actor);
   const system = getSystemRepository();
   const now = new Date();
   const periodStart = subDays(now, CONTEXT_WINDOW_DAYS).toISOString();
@@ -182,7 +192,7 @@ export async function processEntry(
     );
     await recordAiUsage({
       patientId: patient.id,
-      trigger: { kind: actor.role, userId: actor.userId },
+      trigger,
       items: usageItemsFromEvents(events, (kind) =>
         kind === "observation_extraction"
           ? { operation: "entry_extraction", journalEntryId: entry.id }
@@ -278,7 +288,21 @@ export async function ingestFilteredEntry(
   const occurredAt = normalizeOccurredAt(input.occurredAt);
   const patient = await requirePatient(actor, patientId);
 
-  const created = await getRepository(actor).createEntry({
+  const created = await getRepository(actor).createEntry(newPendingEntry(patientId, body, occurredAt, input));
+  // The receipt is a system-only write (ARCHITECTURE 5.1): counts only, never any removed text.
+  const entry = await getSystemRepository().updateEntry(created.id, { privacyFilter: filtered.receipt });
+
+  await processEntry(actor, patient, entry, { summarize: options.summarize });
+  return loadView(actor, entry.id);
+}
+
+function newPendingEntry(
+  patientId: string,
+  body: string,
+  occurredAt: string,
+  input: { source: EntrySource; sourceRefId?: string | null; voiceSessionId?: string | null },
+): NewJournalEntry {
+  return {
     patientId,
     source: input.source,
     body,
@@ -290,12 +314,28 @@ export async function ingestFilteredEntry(
     sourceRefId: input.sourceRefId ?? null,
     voiceSessionId: input.voiceSessionId ?? null,
     editedByPatient: false,
-  });
-  // The receipt is a system-only write (ARCHITECTURE 5.1): counts only, never any removed text.
-  const entry = await getSystemRepository().updateEntry(created.id, { privacyFilter: filtered.receipt });
+  };
+}
 
-  await processEntry(actor, patient, entry, { summarize: options.summarize });
-  return loadView(actor, entry.id);
+/**
+ * ingestFilteredEntry for callers with no session (signed webhooks). Every read and write goes
+ * through the system repository, so the CALLER must have authorized the patient explicitly first
+ * (ARCHITECTURE 5.1), and must have created any `sourceRefId` for this same patient.
+ */
+export async function ingestFilteredEntryForPatient(
+  patient: PatientProfile,
+  filtered: FilteredText,
+  input: { source: EntrySource; occurredAt?: string; sourceRefId?: string | null },
+  options: { trigger: UsageTrigger; summarize?: boolean },
+): Promise<JournalEntry> {
+  const body = normalizeEntryBody(assertStorableBody(filtered));
+  const system = getSystemRepository();
+  const entry = await system.createEntry({
+    ...newPendingEntry(patient.id, body, normalizeOccurredAt(input.occurredAt), input),
+    privacyFilter: filtered.receipt,
+  });
+  await runEntryPipeline(system, options.trigger, patient, entry, { summarize: options.summarize });
+  return (await system.getEntry(entry.id)) ?? entry;
 }
 
 /** Retries extraction for an entry that is still pending review (e.g. after a failure). */

@@ -3,6 +3,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { z } from "zod";
 
 import { DEFAULT_RATE_MICROS_PER_1K, parseRateMicrosPer1k } from "@/lib/billing/money";
 import type { BillingMode } from "@/lib/domain/types";
@@ -125,6 +126,24 @@ export const env = {
     return read("VEXO_REDIRECT_URI") ?? `${env.appUrl}/api/integrations/vexo/callback`;
   },
 
+  // --- Vexo band push (Pipecat bridge -> /api/integrations/vexo/band) ------
+  /** The one band number the bridge may post for (1..999); undefined when unset or invalid. */
+  get vexoBandNumber(): number | undefined {
+    const raw = read("VEXO_BAND_NUMBER");
+    const n = raw && /^\d{1,3}$/.test(raw) ? Number(raw) : NaN;
+    return n >= 1 && n <= 999 ? n : undefined;
+  },
+  /** HMAC secret shared with band-bridge/ (at least 32 characters). SERVER ONLY. */
+  get vexoBandSecret(): string | undefined {
+    const secret = read("VEXO_BAND_SECRET");
+    return secret && secret.length >= MIN_SESSION_SECRET_LENGTH ? secret : undefined;
+  },
+  /** E-mail of the patient account that wears the band. */
+  get vexoBandWearer(): string | undefined {
+    const email = read("VEXO_BAND_WEARER");
+    return email && z.email().safeParse(email).success ? email : undefined;
+  },
+
   // --- Stripe (practice billing, test mode only) --------------------------
   get stripeSecretKey() {
     return read("STRIPE_SECRET_KEY");
@@ -195,11 +214,24 @@ export function getDataBackend(): DataBackend {
   return hasSupabase() ? "supabase" : "local";
 }
 
+export interface BandIngestConfig {
+  bandNumber: number;
+  secret: string;
+  wearerEmail: string;
+}
+
+/** Band ingest is enabled only when all three VEXO_BAND_* values are valid. */
+export function getBandIngestConfig(): BandIngestConfig | null {
+  const { vexoBandNumber: bandNumber, vexoBandSecret: secret, vexoBandWearer: wearerEmail } = env;
+  return bandNumber !== undefined && secret && wearerEmail ? { bandNumber, secret, wearerEmail } : null;
+}
+
 export interface IntegrationStatus {
   data: { mode: DataBackend; label: string };
   ai: { mode: "openai" | "mock"; model: string | null; label: string };
   voice: { mode: "elevenlabs" | "simulated"; label: string };
   vexo: { mode: "live" | "mock" | "file"; label: string };
+  band: { mode: "live" | "off"; label: string };
   billing: { mode: BillingMode; label: string };
 }
 
@@ -218,6 +250,7 @@ export function getIntegrationStatus(): IntegrationStatus {
   const ai = env.openaiApiKey ? "openai" : "mock";
   const voice = env.elevenlabsApiKey && env.elevenlabsAgentId ? "elevenlabs" : "simulated";
   const vexo = env.vexoMode;
+  const band = getBandIngestConfig();
   return {
     data: {
       mode: data,
@@ -241,6 +274,9 @@ export function getIntegrationStatus(): IntegrationStatus {
             ? "Vexo band replay (file)"
             : "Mock Vexo memories",
     },
+    band: band
+      ? { mode: "live", label: `Vexo band ${band.bandNumber} · Pipecat bridge` }
+      : { mode: "off", label: "Not configured" },
     billing: {
       mode: getBillingMode(),
       label:
