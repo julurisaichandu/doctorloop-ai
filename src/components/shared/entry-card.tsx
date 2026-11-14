@@ -54,6 +54,9 @@ function provenance(ref: SourceReference): string {
             : "ElevenLabs conversation";
     return `${label}${title}${original}${ext}`;
   }
+  if (md.tool === "pipecat") {
+    return `Voice check-in with the Pipecat agent (Deepgram + OpenAI) · transcript captured in the browser (unverified)${original}`;
+  }
   if (md.kind === "photo") return `Photo added by the patient${original}`;
   return `Manual note${title}${original}`;
 }

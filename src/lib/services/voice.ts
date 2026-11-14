@@ -17,7 +17,7 @@ import {
   patientBodyFromTranscript,
 } from "@/lib/integrations/elevenlabs/transcript";
 import type { VoiceConnection } from "@/lib/integrations/elevenlabs/types";
-import { filterForStorage, ingestFilteredEntry } from "@/lib/services/ingest";
+import { filterForStorage, ingestEntry, ingestFilteredEntry } from "@/lib/services/ingest";
 
 export type { VoiceConnection };
 
@@ -207,4 +207,39 @@ export async function handleElevenLabsWebhook(
   if (claimed.length > 0 && !claimed.includes(session.id)) return { handled: false };
 
   return { handled: true };
+}
+
+/**
+ * Completes a call on the Pipecat voice agent. No voice_sessions row exists for these calls (the hosted
+ * schema only knows elevenlabs/simulated), so the source reference alone carries provenance. The
+ * transcript comes from the browser and is labelled unverified; no transcript text is stored on the ref.
+ */
+export async function completePipecatCheckIn(
+  actor: Actor,
+  input: { transcript: TranscriptTurn[] },
+): Promise<TimelineEntryView> {
+  const patientId = assertPatientSelf(actor);
+  const body = patientBodyFromTranscript(input.transcript);
+  if (!body) throw validationError("Nothing was recorded in this call.");
+
+  const now = new Date().toISOString();
+  const sourceRef = await getSystemRepository().createSourceRef({
+    patientId,
+    provider: "manual",
+    mode: "live",
+    externalId: null,
+    title: "Voice check-in (Pipecat agent)",
+    excerpt: null,
+    sourceTimestamp: input.transcript.find((t) => t.at)?.at ?? now,
+    retrievedAt: now,
+    metadata: {
+      tool: "pipecat",
+      transcriptSource: "client_unverified",
+      sttProvider: "deepgram",
+      llmProvider: "openai",
+      ttsProvider: "deepgram",
+      turns: input.transcript.length,
+    },
+  });
+  return ingestEntry(actor, { source: "voice", body, sourceRefId: sourceRef.id });
 }

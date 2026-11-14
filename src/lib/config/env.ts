@@ -100,6 +100,14 @@ export const env = {
     return read("ELEVENLABS_WEBHOOK_SECRET");
   },
 
+  // --- Pipecat voice agent (voice-agent/) ---------------------------------
+  /** http(s) URL of the Pipecat voice agent; undefined when unset or invalid. */
+  get pipecatVoiceUrl(): string | undefined {
+    const raw = read("PIPECAT_VOICE_URL");
+    if (!raw || !z.url({ protocol: /^https?$/ }).safeParse(raw).success) return undefined;
+    return raw.replace(/\/+$/, "");
+  },
+
   // --- Vexo MCP -----------------------------------------------------------
   /** "live" / "file" only when explicitly enabled; otherwise the labeled mock adapter is used. */
   get vexoMode(): "live" | "mock" | "file" {
@@ -229,7 +237,7 @@ export function getBandIngestConfig(): BandIngestConfig | null {
 export interface IntegrationStatus {
   data: { mode: DataBackend; label: string };
   ai: { mode: "openai" | "mock"; model: string | null; label: string };
-  voice: { mode: "elevenlabs" | "simulated"; label: string };
+  voice: { mode: "elevenlabs" | "simulated" | "live"; label: string };
   vexo: { mode: "live" | "mock" | "file"; label: string };
   band: { mode: "live" | "off"; label: string };
   billing: { mode: BillingMode; label: string };
@@ -248,7 +256,8 @@ export function getBillingMode(): BillingMode {
 export function getIntegrationStatus(): IntegrationStatus {
   const data = getDataBackend();
   const ai = env.openaiApiKey ? "openai" : "mock";
-  const voice = env.elevenlabsApiKey && env.elevenlabsAgentId ? "elevenlabs" : "simulated";
+  const pipecat = env.pipecatVoiceUrl;
+  const voice = pipecat ? "live" : env.elevenlabsApiKey && env.elevenlabsAgentId ? "elevenlabs" : "simulated";
   const vexo = env.vexoMode;
   const band = getBandIngestConfig();
   return {
@@ -263,7 +272,11 @@ export function getIntegrationStatus(): IntegrationStatus {
     },
     voice: {
       mode: voice,
-      label: voice === "elevenlabs" ? "ElevenLabs voice agent" : "Simulated voice check-in",
+      label: pipecat
+        ? "Voice check-in on the Pipecat agent (Deepgram + OpenAI)"
+        : voice === "elevenlabs"
+          ? "ElevenLabs voice agent"
+          : "Simulated voice check-in",
     },
     vexo: {
       mode: vexo,
