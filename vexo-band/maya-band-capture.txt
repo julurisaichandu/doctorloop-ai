@@ -1,0 +1,61 @@
+# Fictional Vexo band capture for the DoctorLoop AI demo. Nothing here is real data.
+#
+# Format (see README.md in this folder):
+#   - "## when | title | duration" starts a recording. Title and duration are optional.
+#       when     = "yesterday 08:14", "2 days ago 21:30", "today 07:05", or "2026-11-10 08:14"
+#       duration = "6 min" or "6m" (leave it out if unknown)
+#   - Everything below a header, up to the next header, is what the band heard.
+#   - Lines starting with a single "#" (or "###") are comments and are ignored.
+#   - The "wearer:" line below limits this file to one patient (their account e-mail).
+#
+# "N days ago" times are relative to when the app reads the file, so this capture always
+# looks recent. Edit freely: the file is re-read on every refresh.
+
+wearer: maya.thompson@example.com
+
+## 4 days ago 08:12 | Morning stiffness | 3 min
+My knee is really stiff this morning. It takes a good ten minutes of moving around before it loosens up.
+The stiffness is mostly on the inside and it is worst when I first stand up from bed.
+
+## 4 days ago 12:40 | Work stand-up | 15 min
+Quick stand-up with the design team. Jordan is finishing the landing page mockups and Priyanka needs feedback on the colour palette by Thursday.
+We agreed to move the client review to next week and keep the sprint board tidy.
+
+## 3 days ago 15:25 | After physio | 4 min
+Just got back from physio at the clinic on 418 Beacon Street and my knee is so sore. It's about a 7 out of 10 when I bend it past ninety degrees.
+The therapist said that is normal for this stage but it still really hurts on the way home.
+
+## 3 days ago 19:30 | Birthday dinner plans | 9 min
+We should book the Italian place for Sam's birthday on Saturday. Eight people, and someone has to order the cake from the bakery.
+I'll text everyone tonight and ask who is vegetarian before I call the restaurant.
+
+## 3 days ago 23:50 | Another bad night | 2 min
+I only slept about four and a half hours last night. I kept waking up because my knee was aching and I couldn't get comfortable.
+I'm exhausted today.
+
+## 2 days ago 09:05 | Podcast chat | 11 min
+That podcast episode about the history of lighthouses was brilliant. The host kept going on about the keepers who lived out there for months at a time.
+I'm going to send the link to my dad, he loves that kind of thing.
+
+## 2 days ago 13:10 | Lunch with Chloe | 40 min
+Chloe was telling me about her new manager and the reorganisation at her company. Apparently the whole marketing team is moving to the third floor.
+We talked about the trip she is planning to Lisbon in spring and which neighbourhood to stay in.
+Oh, and my knee has been aching all morning and I'm a bit worried about it. It is around a 6 out of 10 today.
+Anyway, she showed me photos of the apartment she found. It has a lovely balcony and a view of the river.
+
+## 2 days ago 18:45 | Stairs at home | 3 min
+Still on my crutches for the stairs. Going down is the slow part because my knee feels wobbly and I don't trust it.
+I took them one at a time again and my husband stood behind me just in case.
+
+## yesterday 07:50 | Icing the swelling | 2 min
+My knee is swollen again this morning, puffier around the kneecap than yesterday.
+I'm going to put an ice pack on it for fifteen minutes and keep my leg up on the sofa cushions.
+
+## yesterday 17:20 | Groceries | 5 min
+We need oats, bananas, olive oil, two onions, a bag of rice and the good coffee. Also bin bags and something for dinner on Thursday.
+Maybe pasta with mushrooms. I'll write it on the whiteboard so I do not forget.
+
+## yesterday 21:15 | Questions for my care team | 4 min
+I keep wondering when I'll be allowed to drive again, and whether I should be icing my knee at night when it aches.
+I want to ask Dr. Park about both at my next appointment. I should write the questions down so I don't forget.
+My neighbour Linda Okoro said I can call her on 617-555-0142 if I need a lift to the appointment.

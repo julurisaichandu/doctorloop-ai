@@ -1,0 +1,288 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
+  --font-heading: var(--font-sans);
+
+  /* Ink & Signal tokens (docs/DESIGN.md section 2) */
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-paper-3: var(--paper-3);
+  --color-hairline: var(--hairline);
+  --color-muted-ink: var(--muted-ink);
+  --color-lime: var(--lime);
+  --color-lime-deep: var(--lime-deep);
+  --color-vermilion: var(--vermilion);
+  --color-vermilion-deep: var(--vermilion-deep);
+  --color-cobalt: var(--cobalt);
+  --color-cobalt-soft: var(--cobalt-soft);
+  --color-amber: var(--amber);
+  --color-amber-deep: var(--amber-deep);
+  --color-bone: var(--bone);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  /* Legacy AI tint tokens, kept so pages not yet migrated still render legibly. */
+  --color-ai: var(--ai);
+  --color-ai-foreground: var(--ai-foreground);
+  --color-ai-border: var(--ai-border);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --ink: #0e0f12;
+  --ink-2: #1b1d22;
+  --ink-3: #2a2d35;
+  --paper: #f4efe6;
+  --paper-2: #fbf8f2;
+  --paper-3: #eae3d6;
+  --hairline: #ddd4c4;
+  --ink-muted: #6b665d; /* spec token "--muted" (secondary text on paper) */
+  --muted-ink: #a9a49a;
+  --lime: #c8f03c;
+  --lime-deep: #5f7d00;
+  --vermilion: #ff4a1c;
+  --vermilion-deep: #b8330f;
+  --cobalt: #2b3bff;
+  --cobalt-soft: #8c96ff;
+  --amber: #ffb400;
+  --amber-deep: #a86f00;
+  --bone: #8a857b;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper-2);
+  --card-foreground: var(--ink);
+  --popover: var(--paper-2);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--paper);
+  --secondary: var(--paper-3);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper-3);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--lime);
+  --accent-foreground: var(--ink);
+  --destructive: var(--vermilion-deep);
+  --border: var(--hairline);
+  --input: var(--hairline);
+  --ring: var(--cobalt);
+  --chart-1: var(--vermilion);
+  --chart-2: var(--cobalt);
+  --chart-3: var(--lime-deep);
+  --chart-4: var(--amber-deep);
+  --chart-5: var(--ink);
+  --radius: 0.875rem;
+  --sidebar: var(--ink);
+  --sidebar-foreground: color-mix(in oklab, var(--paper) 80%, transparent);
+  --sidebar-primary: var(--lime);
+  --sidebar-primary-foreground: var(--ink);
+  --sidebar-accent: var(--ink-3);
+  --sidebar-accent-foreground: var(--paper);
+  --sidebar-border: var(--ink-3);
+  --sidebar-ring: var(--lime);
+  --ai: var(--paper-3);
+  --ai-foreground: var(--ink);
+  --ai-border: var(--hairline);
+}
+
+/* Dark values stay valid; the product itself is light (paper) with ink bands. */
+.dark {
+  --background: var(--ink);
+  --foreground: var(--paper);
+  --card: var(--ink-2);
+  --card-foreground: var(--paper);
+  --popover: var(--ink-2);
+  --popover-foreground: var(--paper);
+  --primary: var(--lime);
+  --primary-foreground: var(--ink);
+  --secondary: var(--ink-3);
+  --secondary-foreground: var(--paper);
+  --muted: var(--ink-3);
+  --muted-foreground: var(--muted-ink);
+  --accent: var(--lime);
+  --accent-foreground: var(--ink);
+  --destructive: var(--vermilion);
+  --border: var(--ink-3);
+  --input: var(--ink-3);
+  --ring: var(--cobalt-soft);
+  --chart-1: var(--lime);
+  --chart-2: var(--vermilion);
+  --chart-3: var(--cobalt-soft);
+  --chart-4: var(--amber);
+  --chart-5: var(--paper);
+  --ai: var(--ink-2);
+  --ai-foreground: var(--paper);
+  --ai-border: var(--ink-3);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--cobalt);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--lime);
+    color: var(--ink);
+  }
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    letter-spacing: 0;
+    word-spacing: 0.08em;
+    font-weight: 400;
+  }
+  /* Mono uppercase label (eyebrows, meta). */
+  .eyebrow {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Film-grain overlay for ink bands / hero areas. Parent: relative + overflow-hidden. */
+  .grain {
+    position: relative;
+    isolation: isolate;
+  }
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  .shimmer {
+    background: linear-gradient(
+      100deg,
+      var(--paper-3) 30%,
+      color-mix(in oklab, var(--paper-3) 55%, var(--paper-2)) 50%,
+      var(--paper-3) 70%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee var(--marquee-speed, 35s) linear infinite;
+  }
+  .marquee:hover .marquee-track,
+  .marquee:focus-within .marquee-track {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.page-enter {
+  animation: page-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes page-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shimmer,
+  .marquee-track {
+    animation: none;
+  }
+  .page-enter {
+    animation: page-fade 0.2s linear both;
+  }
+}
