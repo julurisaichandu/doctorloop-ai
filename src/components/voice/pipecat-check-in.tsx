@@ -118,6 +118,15 @@ export function PipecatCheckIn({
     });
     clientRef.current = client;
 
+    // An agent without its keys accepts the offer and then drops the call without an event: give up.
+    window.setTimeout(() => {
+      if (phaseRef.current !== "connecting") return;
+      console.error("[pipecat] no answer in 15 s: is voice-agent running with DEEPGRAM_API_KEY and OPENAI_API_KEY?");
+      setError("The voice agent did not answer. Please try again, or write your update instead.");
+      goto("error");
+      void client.disconnect().catch(() => {});
+    }, 15_000);
+
     try {
       await client.startBotAndConnect({
         endpoint: `${url}/start`,

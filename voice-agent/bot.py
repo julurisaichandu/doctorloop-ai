@@ -136,6 +136,11 @@ async def bot(runner_args: RunnerArguments):
 
 
 if __name__ == "__main__":
+    import sys
+
     from pipecat.runner.run import main
 
+    missing = [k for k in ("DEEPGRAM_API_KEY", "OPENAI_API_KEY") if not os.getenv(k)]
+    if missing:
+        sys.exit(f"Set {' and '.join(missing)} in the repo .env before starting the voice agent.")
     main()
