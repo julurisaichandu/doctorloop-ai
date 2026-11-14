@@ -37,6 +37,11 @@ export function PipecatCheckIn({
   const clientRef = useRef<PipecatClient | null>(null);
   const turnsRef = useRef<TranscriptTurn[]>([]);
   const phaseRef = useRef<Phase>("idle");
+  const giveUpRef = useRef<number | null>(null);
+  const stopGiveUp = useCallback(() => {
+    if (giveUpRef.current !== null) window.clearTimeout(giveUpRef.current);
+    giveUpRef.current = null;
+  }, []);
   const goto = useCallback((next: Phase) => {
     phaseRef.current = next;
     setPhase(next);
@@ -68,8 +73,9 @@ export function PipecatCheckIn({
       const client = clientRef.current;
       clientRef.current = null;
       void client?.disconnect().catch(() => {});
+      stopGiveUp();
     },
-    [],
+    [stopGiveUp],
   );
 
   async function start() {
@@ -100,13 +106,18 @@ export function PipecatCheckIn({
         },
         onBotStartedSpeaking: () => setSpeaking(true),
         onBotStoppedSpeaking: () => setSpeaking(false),
-        onBotReady: () => goto("live"),
+        onConnected: stopGiveUp,
+        onBotReady: () => {
+          stopGiveUp();
+          goto("live");
+        },
         // The bot (or a dropped connection) ended the call: save what was captured.
         onDisconnected: () => {
           setSpeaking(false);
           if (phaseRef.current === "live") void finish();
         },
         onError: (message) => {
+          stopGiveUp();
           console.error("[pipecat] error:", message);
           if (phaseRef.current === "connecting") {
             setError("Could not connect the voice check-in. Please try again or use text instead.");
@@ -118,8 +129,10 @@ export function PipecatCheckIn({
     });
     clientRef.current = client;
 
-    // An agent without its keys accepts the offer and then drops the call without an event: give up.
-    window.setTimeout(() => {
+    // The transport never connected (agent down or refusing the call): give up instead of spinning.
+    stopGiveUp();
+    giveUpRef.current = window.setTimeout(() => {
+      giveUpRef.current = null;
       if (phaseRef.current !== "connecting") return;
       console.error("[pipecat] no answer in 15 s: is voice-agent running with DEEPGRAM_API_KEY and OPENAI_API_KEY?");
       setError("The voice agent did not answer. Please try again, or write your update instead.");
@@ -142,6 +155,7 @@ export function PipecatCheckIn({
   }
 
   async function end() {
+    stopGiveUp();
     const client = clientRef.current;
     goto("finishing");
     await client?.disconnect().catch(() => {});

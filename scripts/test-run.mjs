@@ -97,6 +97,10 @@ const forcedEmpty = [
   "ELEVENLABS_AGENT_ID",
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
+  "PIPECAT_VOICE_URL",
+  "VEXO_BAND_NUMBER",
+  "VEXO_BAND_SECRET",
+  "VEXO_BAND_WEARER",
   ...(opts.mockAi ? ["OPENAI_API_KEY"] : []),
 ];
 const env = {
