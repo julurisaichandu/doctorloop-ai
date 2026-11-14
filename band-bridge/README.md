@@ -92,7 +92,7 @@ like the band's microphone. `uv run fixtures/make_fixture.py` rebuilds it.
 | `heard    12 words (conversation so far: 64 chars)` | Deepgram finished a sentence. The text is not shown. |
 | `kept     health_related ... recordingId=... chars=... gate=gemini -> stored` | Sent to the app. The end is the app's answer. |
 | `dropped  very_private ... recordingId=... chars=...` | Not sent. The reason is `very_private`, `not_health_related` or `blocked`. |
-| `gate: Gemini failed (HTTP 503); the rule-based gate decides this one` | Google was unreachable. The rules decided, and the receipt says `fallback: true`. |
+| `gate: Gemini failed (TimeoutError); the rule-based gate decides this one` | Google did not answer. The rules decided, and the receipt says `fallback: true`. Google's client retries busy errors for up to 10 s first, so an outage adds about 10 s per conversation. |
 | `lost the band; trying to reconnect ...` / `the band is back; listening again` | The link dropped and came back. |
 | `microphone off, band disconnected` | Clean stop. |
 | `done: 1 kept, 1 dropped` | Totals for the run. |
