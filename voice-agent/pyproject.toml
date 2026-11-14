@@ -1,0 +1,11 @@
+[project]
+name = "doctorloop-voice-agent"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "pipecat-ai[deepgram,openai,webrtc,runner]==1.16.0",
+  "python-dotenv>=1.0",
+]
+
+[tool.uv]
+package = false
