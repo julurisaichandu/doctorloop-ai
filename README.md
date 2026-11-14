@@ -146,6 +146,14 @@ OAuth facts discovered from Vexo's public metadata (research notes in `src/lib/i
 
 Contract, flow and privacy rules: `docs/ARCHITECTURE.md` §6.8 and `docs/PRIVACY_FILTER.md`.
 
+### Voice check-in calls (Pipecat agent)
+
+`voice-agent/` runs the check-in call on Pipecat: Deepgram speech-to-text, OpenAI, and Deepgram Aura voice over SmallWebRTC. Set `DEEPGRAM_API_KEY` and `OPENAI_API_KEY` in `.env`, run `cd voice-agent && uv run bot.py -t webrtc --allowed-origins http://localhost:3000`, and set `PIPECAT_VOICE_URL=http://localhost:7860`. The check-in page then uses the agent instead of ElevenLabs. When the call ends, the patient's words go through the privacy filter into a "pending your review" voice entry. See [`voice-agent/README.md`](voice-agent/README.md).
+
+### Photos on the timeline
+
+On **Timeline**, **Add photo** saves a photo with an optional note and time. The server re-encodes it (EXIF and GPS removed, at most 2048 px) and stores it in the private Supabase Storage bucket `entry-photos` (created automatically; no migration) or on local disk. A photo entry follows the normal sharing rules: doctors see it only after the patient shares it, and `GET /api/photos/[photoId]` checks access on every request.
+
 ---
 
 ## Practice billing (Stripe test mode)
