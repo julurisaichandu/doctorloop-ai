@@ -1,18 +1,7 @@
 "use client";
 
-import type { SourceReference } from "@/lib/domain/types";
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-
-export function photoOf(
-  ref: SourceReference | null | undefined,
-): { src: string; width: number; height: number } | null {
-  const md = ref?.metadata;
-  if (!ref || md?.kind !== "photo") return null;
-  const { width, height } = md;
-  if (typeof width !== "number" || typeof height !== "number") return null;
-  return { src: `/api/photos/${ref.id}`, width, height };
-}
 
 /** Plain <img>: the route is authorized, so next/image's optimizer cannot fetch it. */
 export function EntryPhoto({
