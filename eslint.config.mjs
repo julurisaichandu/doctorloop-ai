@@ -14,6 +14,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Python virtualenvs (band-bridge/, voice-agent/) ship third-party TS templates.
+    "**/.venv/**",
+    ".claude/**",
   ]),
 ]);
 
