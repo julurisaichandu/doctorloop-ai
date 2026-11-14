@@ -14,7 +14,8 @@ patient's review.
 ```
 
 It is one Pipecat pipeline in `bridge.py`. A conversation ends after a silence (20 s by default),
-at 16,000 characters, or when the run ends. The gate drops private or off-topic conversations on
+or at 16,000 characters. Only `--sim` and `--say` runs also send the open conversation when they end; Ctrl-C
+stops a live run at once and drops it. The gate drops private or off-topic conversations on
 this laptop. They are never sent to the app.
 
 ## Safety
@@ -51,7 +52,7 @@ this laptop. They are never sent to the app.
    | `NEXT_PUBLIC_APP_URL` | The app's address. Default `http://localhost:3000`. |
    | `DEEPGRAM_MODEL` | Default `nova-3`. |
    | `DEEPGRAM_ENDPOINTING_MS` | Default 100. Higher values make sentences arrive late on band audio. |
-   | `GATE_PRIVATE_MAX`, `GATE_HEALTH_MIN` | Gate thresholds. Default 0.5 each. |
+   | `GATE_PRIVATE_MAX`, `GATE_HEALTH_MIN` | Gate thresholds. Default 0.5 each. Each must be above 0 and at most 1. |
 
 ## Commands
 
