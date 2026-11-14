@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import type { TimelineEntryView } from "@/lib/domain/types";
 import { AiGeneratedLabel } from "@/components/shared/ai-generated-label";
+import { EntryPhoto, photoOf } from "@/components/shared/entry-photo";
 import { ObservationItem } from "@/components/shared/observation-item";
 import { PatientQuote } from "@/components/shared/patient-quote";
 import { isBandReplay, SourceBadge } from "@/components/shared/source-badge";
@@ -86,11 +87,15 @@ function RecordEvidence({ item }: { item: TimelineEntryView }) {
     [observations],
   );
 
+  const photo = photoOf(item.sourceRef);
   return (
     <>
-      <PatientQuote className="text-[1.05rem]">
-        <AnnotatedText text={entry.body} annotations={annotations} activeId={activeId} onActiveChange={setActiveId} />
-      </PatientQuote>
+      {entry.body ? (
+        <PatientQuote className="text-[1.05rem]">
+          <AnnotatedText text={entry.body} annotations={annotations} activeId={activeId} onActiveChange={setActiveId} />
+        </PatientQuote>
+      ) : null}
+      {photo ? <EntryPhoto photo={photo} /> : null}
       <PrivacyReceipt receipt={item.privacyFilter} audience="doctor" className="mt-0" />
 
       <section aria-label="Provenance" className="space-y-2">

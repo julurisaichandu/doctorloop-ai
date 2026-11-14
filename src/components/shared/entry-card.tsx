@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { DoctorReviewBadge } from "./doctor-review-badge";
 import { EntryEvidence } from "./entry-evidence";
+import { EntryPhoto, photoOf } from "./entry-photo";
 import { PrivacyReceipt } from "./privacy-receipt";
 import { ReviewStatusBadge } from "./review-status-badge";
 import { isBandReplay, SourceBadge } from "./source-badge";
@@ -52,6 +53,7 @@ function provenance(ref: SourceReference): string {
             : "ElevenLabs conversation";
     return `${label}${title}${original}${ext}`;
   }
+  if (md.kind === "photo") return `Photo added by the patient${original}`;
   return `Manual note${title}${original}`;
 }
 
@@ -72,8 +74,10 @@ export function EntryCard({
   const aiProvider = observations[0]?.extractedBy;
   const aiModel = observations[0]?.model ?? null;
 
+  const photo = photoOf(sourceRef);
   const meta = (
     <>
+      {photo ? <EntryPhoto photo={photo} className="mt-3 ml-9" /> : null}
       {entry.editedByPatient ? <p className="eyebrow mt-2 pl-9 text-muted-foreground">Edited by patient</p> : null}
       {sourceRef ? <p className="mt-2 pl-9 font-mono text-xs text-muted-foreground">{provenance(sourceRef)}</p> : null}
       <PrivacyReceipt

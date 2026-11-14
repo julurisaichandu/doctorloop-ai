@@ -15,6 +15,10 @@ const DOCTOR_VISIBLE_SOURCE_METADATA = [
   // Band push: which band and how it was transcribed. Gate scores stay patient-only.
   "bandNumber",
   "sttProvider",
+  // Photo entries: dimensions only. storagePath must never be added.
+  "kind",
+  "width",
+  "height",
 ] as const;
 
 /** Doctor-facing copy of a source reference: no excerpt, whitelisted metadata only. */
