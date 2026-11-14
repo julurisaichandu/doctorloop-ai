@@ -10,7 +10,7 @@ export function IntegrationsPopover({ status, showBilling = false }: { status: I
   const rows = [
     { name: "Data", label: status.data.label, mode: status.data.mode === "supabase" ? "live" : "local" },
     { name: "AI", label: status.ai.label, mode: status.ai.mode === "openai" ? "live" : "mock" },
-    { name: "Voice", label: status.voice.label, mode: status.voice.mode === "elevenlabs" ? "live" : "simulated" },
+    { name: "Voice", label: status.voice.label, mode: status.voice.mode !== "simulated" ? "live" : "simulated" },
     { name: "Vexo", label: status.vexo.label, mode: status.vexo.mode === "file" ? "simulated" : status.vexo.mode },
     { name: "Band", label: status.band.label, mode: status.band.mode },
     ...(showBilling

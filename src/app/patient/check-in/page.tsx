@@ -3,7 +3,9 @@ import { ManualEntryForm } from "@/components/patient/manual-entry-form";
 import { ClinicalDisclaimer } from "@/components/shared/clinical-disclaimer";
 import { VoiceCheckIn } from "@/components/voice/voice-check-in";
 import { requireActor } from "@/lib/auth/session";
-import { getIntegrationStatus } from "@/lib/config/env";
+import { PipecatCheckIn } from "@/components/voice/pipecat-check-in";
+import { env, getIntegrationStatus } from "@/lib/config/env";
+import { getRepository } from "@/lib/data";
 import { CheckInTabs } from "./check-in-tabs";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -11,7 +13,10 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 export default async function CheckInPage({ searchParams }: { searchParams: SearchParams }) {
   const [actor, params] = await Promise.all([requireActor("patient"), searchParams]);
   const tab = Array.isArray(params.tab) ? params.tab[0] : params.tab;
-  const voiceMode = getIntegrationStatus().voice.mode;
+  const status = getIntegrationStatus().voice.mode;
+  const voiceMode = status === "elevenlabs" ? "elevenlabs" : "simulated";
+  const pipecatUrl = env.pipecatVoiceUrl;
+  const profile = pipecatUrl ? await getRepository(actor).getPatientByUserId(actor.userId) : null;
   const firstName = actor.fullName.split(" ")[0] ?? actor.fullName;
 
   return (
@@ -39,7 +44,18 @@ export default async function CheckInPage({ searchParams }: { searchParams: Sear
 
       <CheckInTabs
         initialTab={tab === "write" ? "write" : "voice"}
-        voice={<VoiceCheckIn patientFirstName={firstName} mode={voiceMode} />}
+        voice={
+          pipecatUrl ? (
+            <PipecatCheckIn
+              url={pipecatUrl}
+              patientFirstName={firstName}
+              procedure={profile?.procedure ?? ""}
+              recoveryStage={profile?.recoveryStage ?? ""}
+            />
+          ) : (
+            <VoiceCheckIn patientFirstName={firstName} mode={voiceMode} />
+          )
+        }
         write={<ManualEntryForm />}
       />
 

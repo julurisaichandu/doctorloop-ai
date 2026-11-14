@@ -24,7 +24,7 @@ export default async function Home() {
   const integrations = [
     { label: status.data.label, mode: status.data.mode === "supabase" ? "live" : "local" },
     { label: status.ai.label, mode: status.ai.mode === "openai" ? "live" : "mock" },
-    { label: status.voice.label, mode: status.voice.mode === "elevenlabs" ? "live" : "simulated" },
+    { label: status.voice.label, mode: status.voice.mode !== "simulated" ? "live" : "simulated" },
     { label: status.vexo.label, mode: status.vexo.mode === "file" ? "simulated" : status.vexo.mode },
   ] as const;
 

@@ -4,10 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireActor } from "@/lib/auth/session";
 import { toActionResult } from "@/lib/errors";
-import { completeVoiceInputSchema } from "@/lib/integrations/elevenlabs/transcript";
-import { cancelVoiceSession, completeVoiceSession, startVoiceSession } from "@/lib/services/voice";
+import { clientTranscriptSchema, completeVoiceInputSchema } from "@/lib/integrations/elevenlabs/transcript";
+import { cancelVoiceSession, completePipecatCheckIn, completeVoiceSession, startVoiceSession } from "@/lib/services/voice";
 
 const completeActionSchema = completeVoiceInputSchema.extend({ sessionId: z.uuid() });
+const pipecatSchema = z.object({ transcript: clientTranscriptSchema.min(1) });
 const sessionIdSchema = z.uuid();
 
 function revalidatePatientViews() {
@@ -39,5 +40,15 @@ export async function cancelVoiceSessionAction(sessionId: string) {
     const session = await cancelVoiceSession(actor, id);
     revalidatePatientViews();
     return session;
+  });
+}
+
+export async function completePipecatCheckInAction(input: z.input<typeof pipecatSchema>) {
+  return toActionResult(async () => {
+    const parsed = pipecatSchema.parse(input);
+    const actor = await requireActor("patient");
+    const view = await completePipecatCheckIn(actor, parsed);
+    revalidatePatientViews();
+    return { entryId: view.entry.id };
   });
 }
