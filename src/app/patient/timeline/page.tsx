@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ClipboardCheck } from "lucide-react";
+import { AddPhotoDialog } from "@/components/patient/add-photo-dialog";
 import { HashScroller } from "@/components/patient/hash-scroller";
 import { orNotFound } from "@/components/patient/or-not-found";
 import { PatientTimeline } from "@/components/patient/patient-timeline";
@@ -92,6 +93,7 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
         eyebrow="Timeline"
         title="Your recovery timeline"
         description="Every update you have recorded, newest first, with who can see it."
+        actions={<AddPhotoDialog />}
       />
       <TimelineFilters source={source} status={status} />
       <PatientTimeline

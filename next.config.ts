@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   // Classic dynamic rendering: every dashboard is per-user and reads the session cookie.
   // (Cache Components is intentionally not enabled for this prototype.)
   serverExternalPackages: ["@mastra/core"],
+  experimental: { serverActions: { bodySizeLimit: "12mb" } },
   turbopack: {
     rules: {
       "*.css": {

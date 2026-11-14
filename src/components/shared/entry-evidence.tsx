@@ -37,9 +37,11 @@ export function EntryEvidence({
   return (
     <>
       <div className="mt-4">
-        <PatientQuote>
-          <AnnotatedText text={body} annotations={annotations} activeId={activeId} onActiveChange={setActiveId} />
-        </PatientQuote>
+        {body ? (
+          <PatientQuote>
+            <AnnotatedText text={body} annotations={annotations} activeId={activeId} onActiveChange={setActiveId} />
+          </PatientQuote>
+        ) : null}
         {meta}
       </div>
 
