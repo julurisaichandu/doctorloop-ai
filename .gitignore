@@ -47,3 +47,9 @@ playwright-report/
 .verification/
 !.env.example
 /.next-*/
+
+# Python (band-bridge)
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
