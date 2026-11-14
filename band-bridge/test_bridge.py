@@ -6,6 +6,7 @@ import hmac
 import json
 import os
 import re
+from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
@@ -337,3 +338,79 @@ def test_end_to_end_private_conversation_is_not_posted(band, capfd):
     assert requests == []
     out, err = capfd.readouterr()
     assert "dropped  very_private" in out and "4512" not in out + err
+
+
+# ---- delivery accounting, thresholds, rule gate ----
+
+
+def say_run(url, dry_run=False, monkeypatch=None):
+    cfg = bridge.Config(band=1, secret=SECRET, app_url=url)
+    args = bridge.parse_args(["--say", HEALTH] + (["--dry-run"] if dry_run else []))
+    return asyncio.run(bridge.run(args, cfg))
+
+
+@pytest.fixture
+def fast_retries(monkeypatch):
+    monkeypatch.setattr(bridge, "DoctorLoopSink", partial(bridge.DoctorLoopSink, backoff=(0,)))
+
+
+def test_run_fails_when_the_app_rejects(fast_retries, capfd):
+    async def go():
+        async with Capture([400]) as app:
+            return await bridge.run(bridge.parse_args(["--say", HEALTH]),
+                                    bridge.Config(band=1, secret=SECRET, app_url=app.url))
+
+    assert asyncio.run(go()) == 1
+    assert "1 kept, 0 dropped, 0 delivered, 1 failed" in capfd.readouterr().out
+
+
+def test_run_fails_when_the_app_is_unreachable(fast_retries, capfd):
+    assert say_run("http://127.0.0.1:1") == 1
+    assert "1 kept, 0 dropped, 0 delivered, 1 failed" in capfd.readouterr().out
+
+
+def test_run_counts_delivered_and_dry_run_never_fails(fast_retries, capfd):
+    async def go():
+        async with Capture([200]) as app:
+            return await bridge.run(bridge.parse_args(["--say", HEALTH]),
+                                    bridge.Config(band=1, secret=SECRET, app_url=app.url))
+
+    assert asyncio.run(go()) == 0
+    assert "1 kept, 0 dropped, 1 delivered, 0 failed" in capfd.readouterr().out
+    assert say_run("http://127.0.0.1:1", dry_run=True) == 0
+    assert "0 delivered, 0 failed" in capfd.readouterr().out
+
+
+@pytest.mark.parametrize("name", ["GATE_PRIVATE_MAX", "GATE_HEALTH_MIN"])
+@pytest.mark.parametrize("value", ["nan", "5", "0", "-1", "inf"])
+def test_load_config_rejects_bad_thresholds(monkeypatch, name, value):
+    monkeypatch.setenv("VEXO_BAND_NUMBER", "47")
+    monkeypatch.setenv("DEEPGRAM_API_KEY", "k")
+    monkeypatch.setenv(name, value)
+    with pytest.raises(SystemExit, match=name):
+        bridge.load_config(bridge.parse_args(["--dry-run"]))
+
+
+def test_load_config_accepts_one(monkeypatch):
+    monkeypatch.setenv("VEXO_BAND_NUMBER", "47")
+    monkeypatch.setenv("DEEPGRAM_API_KEY", "k")
+    monkeypatch.setenv("GATE_PRIVATE_MAX", "1")
+    assert bridge.load_config(bridge.parse_args(["--dry-run"])).private_max == 1.0
+
+
+@pytest.mark.parametrize("text", [
+    "They put a pin in my ankle and it aches.",
+    "I walked around the food court for twenty minutes.",
+    "I need the code for the physio exercises, my money worries are small.",
+])
+def test_rule_gate_ignores_everyday_words(text):
+    assert bridge.rule_scores(text)[0] == 0.0
+
+
+@pytest.mark.parametrize("text", [
+    "My bank PIN is 4512, don't tell anyone.", "my pin is 4512", "what is your pin number", "my password is x",
+    "the credit card number", "I got a loan", "going through a divorce", "I was arrested", "call my lawyer",
+    "the court date is Friday", "don't tell anybody",
+])
+def test_rule_gate_flags_private_phrases(text):
+    assert bridge.rule_scores(text)[0] == 1.0

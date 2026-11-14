@@ -120,6 +120,12 @@ def load_config(args: argparse.Namespace) -> Config:
         except ValueError:
             sys.exit(f"{name} must be a number, got {raw!r}.")
 
+    def threshold(name: str) -> float:
+        value = number(name, 0.5)
+        if not 0 < value <= 1:  # also rejects nan and inf
+            sys.exit(f"{name} must be above 0 and at most 1, got {env.get(name)!r}.")
+        return value
+
     deepgram_key = env.get("DEEPGRAM_API_KEY", "").strip() or None
     if not args.say and not deepgram_key:
         sys.exit(NO_DEEPGRAM_KEY)
@@ -143,8 +149,8 @@ def load_config(args: argparse.Namespace) -> Config:
         deepgram_model=env.get("DEEPGRAM_MODEL", "").strip() or "nova-3",
         endpointing_ms=number("DEEPGRAM_ENDPOINTING_MS", 100, int),
         gemini_key=env.get("GEMINI_API_KEY", "").strip() or None,
-        private_max=number("GATE_PRIVATE_MAX", 0.5),
-        health_min=number("GATE_HEALTH_MIN", 0.5),
+        private_max=threshold("GATE_PRIVATE_MAX"),
+        health_min=threshold("GATE_HEALTH_MIN"),
         secret=secret,
         app_url=env.get("NEXT_PUBLIC_APP_URL", "").strip() or "http://localhost:3000",
     )
@@ -360,9 +366,9 @@ BLOCK_CODES = {"safety", "prohibited_content", "blocklist", "image_safety", "con
 
 # ponytail: small keyword lists, only for when Gemini is off or unreachable; the app's own filter is layer 2.
 PRIVATE_RE = re.compile(
-    r"\b(?:bank|pin|password|passcode|code|credit card|debit card|card number|account number|salary|"
-    r"loan|debt|money|divorce|affair|girlfriend|boyfriend|sex|sexual|lawyer|court|police|arrest(?:ed)?|"
-    r"lawsuit|secret|don't tell)\b",
+    r"\b(?:bank\s+pin|pin\s+(?:number|code)|pin\s+is\W{0,3}\d+|password|passcode|credit\s+card|debit\s+card|"
+    r"card\s+number|account\s+number|social\s+security|salary|loan|debt|divorce|affair|sexual|lawyer|lawsuit|"
+    r"court\s+(?:case|date)|arrested|police|don['\u2019]t\s+tell\s+(?:anyone|anybody))\b",
     re.IGNORECASE,
 )
 HEALTH_RE = re.compile(
@@ -466,6 +472,9 @@ class PrivacyGate(FrameProcessor):
 # ---- DoctorLoop ----
 
 
+DELIVERED = {"stored", "duplicate", "not_health_related", "nothing_kept"}  # the app's answers that mean "received"
+
+
 def sign(secret: str, t: str, body: bytes) -> str:
     return hmac.new(secret.encode(), t.encode() + b"." + body, hashlib.sha256).hexdigest()
 
@@ -495,6 +504,7 @@ class DoctorLoopSink(FrameProcessor):
         self._stt = stt
         self._dry_run = dry_run
         self._backoff = backoff  # one retry per entry
+        self.delivered = self.failed = 0
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
@@ -502,6 +512,11 @@ class DoctorLoopSink(FrameProcessor):
             await self.push_frame(frame, direction)
             return
         answer = await self.deliver(frame)
+        if not self._dry_run:
+            if answer in DELIVERED:
+                self.delivered += 1
+            else:
+                self.failed += 1
         g = frame.gate or {}
         via = g.get("provider", "?") + (" (fallback)" if g.get("fallback") else "")
         print(f"kept     health_related      recordingId={frame.recording_id} chars={len(frame.text)} "
@@ -599,13 +614,16 @@ async def run(args: argparse.Namespace, cfg: Config, *, deepgram_url: str = "", 
             EndFrame(),
         ])
     await runner.run()
-    print(f"done: {gate.kept} kept, {gate.dropped} dropped")
+    print(f"done: {gate.kept} kept, {gate.dropped} dropped, {sink.delivered} delivered, {sink.failed} failed")
     if source and source.error:
         print(source.error, file=sys.stderr)
         return 1
     if stt and not stt.is_usable:
         print("Deepgram refused the connection or could not be reached. Check DEEPGRAM_API_KEY and "
               "DEEPGRAM_MODEL in the repo .env, and the internet connection.", file=sys.stderr)
+        return 1
+    if sink.failed:
+        print(f"{sink.failed} kept conversation(s) could not be delivered to the app.", file=sys.stderr)
         return 1
     return 0
 
