@@ -4,8 +4,8 @@ DoctorLoop keeps only what a care team needs. Everything that is saved as an upd
 
 ## Layers
 
-0. **Edge gate (band push only).** For recordings from the band bridge (`band-bridge/`), each conversation is first judged on the laptop next to the band: Gemini Decisions estimates "very private" and "health related", and only conversations below the private threshold and above the health threshold (`GATE_PRIVATE_MAX`, `GATE_HEALTH_MIN`, default 0.5) are sent to DoctorLoop. Without a Gemini key, or when the call fails, a rule-based gate decides (marked as a fallback). Dropped conversations never leave the laptop.
-1. **Relevance filter (Vexo import and band push).** Whole band recordings with no health words are dropped. They are never stored and never sent to an AI.
+0. **Edge gate (band push only).** For recordings from the band bridge (`band-bridge/`), each conversation is first judged on the laptop next to the band: Gemini Decisions estimates "very private" and "health related", and only conversations below the private threshold and above the health threshold (`GATE_PRIVATE_MAX`, `GATE_HEALTH_MIN`, default 0.5) are sent to DoctorLoop. Without a Gemini key, or when the call fails, a rule-based gate decides (marked as a fallback). Dropped conversations never reach DoctorLoop (Deepgram and Google have already processed them at the edge, see below).
+1. **Relevance filter (Vexo import and band push).** Whole band recordings with no health words are dropped. They are never stored, and DoctorLoop sends no AI request for them.
 2. **Sentence filter (every saved update: typed, voice, Vexo, and edits).** The text is split into numbered sentences. A classifier says which sentences to keep and which spans to hide. Code then builds the stored text from the kept original sentences. The model never writes text, so what is stored is verbatim apart from placeholders.
 
 ## What is kept, removed and hidden

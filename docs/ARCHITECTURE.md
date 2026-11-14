@@ -402,7 +402,7 @@ EntryTimeline({ items: TimelineEntryView[]; renderActions?: (item) => ReactNode;
 EmptyState({ icon?: LucideIcon; title: string; description?: string; action?: ReactNode })
 PageHeader({ title: string; description?: string; eyebrow?: string; actions?: ReactNode })
 ClinicalDisclaimer({ variant?: "patient" | "doctor"; className? })
-IntegrationModeBadge({ label: string; mode: "live" | "mock" | "simulated" | "local" })
+IntegrationModeBadge({ label: string; mode: "live" | "mock" | "simulated" | "test" | "local" | "off" })
 StatCard({ label: string; value: ReactNode; hint?: string; icon?: LucideIcon })
 ```
 App shell [SHELL]: `src/components/app-shell/app-shell.tsx` (C) —
