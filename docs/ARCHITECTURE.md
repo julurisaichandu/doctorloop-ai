@@ -72,6 +72,10 @@ AI pre-visit summary with citations to original records, and mark updates review
   return (`/api/billing/checkout/complete`) and the Stripe webhook (`/api/webhooks/stripe`). The statement
   CSV export is a server action that returns text; the client saves it as a Blob. The Vexo band push
   (`POST /api/integrations/vexo/band`, §6.8) is a signed webhook from the local Pipecat bridge.
+  `GET /api/photos/[photoId]` serves timeline photos: it re-checks access on every request through
+  `getRepository(actor).listSourceRefs` (RLS / `canReadSourceRef`), so a photo disappears for doctors as soon
+  as sharing stops. A photo is a `manual` entry whose source reference has `metadata.kind = "photo"`; bytes
+  live in the private Supabase Storage bucket `entry-photos` (or `.data/photos` locally).
 - No secrets in client bundles. Only `NEXT_PUBLIC_SUPABASE_URL`,
   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and `NEXT_PUBLIC_APP_URL` may reach the browser.
 - Times: store ISO UTC; display with date-fns (`format(new Date(iso), "MMM d, h:mm a")`).
